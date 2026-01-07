@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Scheduled Responses</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <!-- Add Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <!-- Add jsPDF library for PDF generation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      text-decoration: none;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      display: flex;
+      height: 100vh;
+      background-color: #f4f6f9;
+    }
+
+    .sidebar {
+      width: 260px;
+      background-color: #1e293b;
+      color: #ffffff;
+      padding: 30px 20px;
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      height: 100%;
+      box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .sidebar h2 {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 40px;
+      text-align: center;
+    }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      padding: 12px 16px;
+      border-radius: 6px;
+      color: #cbd5e1;
+      margin-bottom: 12px;
+      transition: background 0.3s ease, color 0.3s ease;
+    }
+
+    .nav-link:hover,
+    .nav-link:focus {
+      background-color: #334155;
+      color: #ffffff;
+    }
+
+    .nav-link span {
+      margin-left: 10px;
+      font-size: 15px;
+    }
+
+    .main-content {
+      margin-left: 260px;
+      padding: 40px;
+      width: calc(100% - 260px);
+      background: #f9fafb;
+      min-height: 100vh;
+      position: relative;
+    }
+
+    .notification-banner {
+      background: linear-gradient(135deg, #2563eb, #3b82f6);
+      color: white;
+      padding: 18px 24px;
+      border-radius: 12px;
+      margin-bottom: 30px;
+      font-weight: 500;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+
+    .notification-banner span {
+      font-size: 16px;
+    }
+
+    .section {
+      background-color: #ffffff;
+      padding: 24px;
+      margin-bottom: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+
+    .section h3 {
+      margin-top: 0;
+      font-size: 20px;
+      border-bottom: 1px solid #e5e7eb;
+      padding-bottom: 10px;
+      margin-bottom: 20px;
+    }
+    
+
+    .table-container {
+      overflow-x: auto;
+      margin-top: 20px;
+      max-height: 400px;
+      overflow-y: auto;
+      border: 1px solid #131519;
+      border-radius: 8px;
+    }
+
+    button {
+      background-color: #2563eb;
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      font-size: 14px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-bottom: 15px;
+    }
+
+    button:hover {
+      background-color: #1d4ed8;
+    }
+
+    #brgyList div,
+    #reportList div {
+      padding: 10px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    ul, li {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Logout button styling */
+    .logout-btn {
+      margin-top: auto;
+      background-color: #dc2626;
+      padding: 12px;
+      text-align: center;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background 0.3s;
+    }
+
+    .logout-btn:hover {
+      background-color: #b91c1c;
+    }
+
+    /* Table Styles */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      min-width: 1500px;
+    }
+
+    th, td {
+      padding: 12px 15px;
+      text-align: left;
+      border-bottom: 1px solid #e5e7eb;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Make the description column wider */
+    th:nth-child(8), td:nth-child(8) {
+      width: 350px;
+      min-width: 250px;
+      max-width: 350px;
+      white-space: normal;
+      word-wrap: break-word;
+      line-height: 1.4;
+    }
+
+    /* Adjust other columns to be more compact */
+    th:nth-child(1), td:nth-child(1) { width: 170px; } /* Case # */
+    th:nth-child(2), td:nth-child(2) { width: 170px; } /* Category */
+    th:nth-child(3), td:nth-child(3) { width: 170px; } /* Blotter Type */
+    th:nth-child(4), td:nth-child(4) { width: 170px; } /* Incident Type */
+    th:nth-child(5), td:nth-child(5) { width: 170px; } /* Barangay */
+    th:nth-child(6), td:nth-child(6) { width: 170px; } /* Reporter */
+    th:nth-child(7), td:nth-child(7) { width: 170px; } /* Email */
+    th:nth-child(9), td:nth-child(9) { width: 170px; } /* Date Submitted */
+    th:nth-child(10), td:nth-child(10) { width: 170px; } /* Incident Time */
+    th:nth-child(11), td:nth-child(11) { width: 200px; } /* Specific Location */
+    th:nth-child(12), td:nth-child(12) { width: 170px; } /* Urgent? */
+    th:nth-child(13), td:nth-child(13) { width: 170px; } /* Schedule */
+    th:nth-child(14), td:nth-child(14) { width: 170px; } /* Status */
+    th:nth-child(15), td:nth-child(15) { width: 170px; } /* Actions */
+
+    th {
+      background-color: #f9fafb;
+      font-weight: 600;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      box-shadow: 0 1px 0 #e5e7eb;
+    }
+
+    tr:hover {
+      background-color: #f8f9fa;
+    }
+
+    .urgent {
+      color: #dc2626;
+      font-weight: 600;
+    }
+
+    .status-pending {
+      color: #d97706;
+      font-weight: 500;
+    }
+
+    .status-in-progress {
+      color: #2563eb;
+      font-weight: 500;
+    }
+
+    .status-scheduled {
+      color: #7c3aed;
+      font-weight: 500;
+    }
+
+    .status-resolved {
+      color: #059669;
+      font-weight: 500;
+    }
+
+    .action-btn {
+      padding: 6px 10px;
+      margin-right: 5px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+      border: none;
+    }
+
+    .schedule-btn {
+      background-color: #2563eb;
+      color: white;
+    }
+
+    .edit-btn {
+      background-color: #d97706;
+      color: white;
+    }
+
+    .complete-btn {
+      background-color: #059669;
+      color: white;
+    }
+
+    .view-btn {
+      background-color: #4b5563;
+      color: white;
+    }
+
+    .filters {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .filter-item {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .filter-item label {
+      font-size: 13px;
+      margin-bottom: 5px;
+      color: #4b5563;
+    }
+
+    .filter-item select, .filter-item input {
+      padding: 8px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 5px;
+      font-size: 14px;
+    }
+
+    .table-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 20px;
+    }
+
+    .entries {
+      font-size: 14px;
+      color: #6b7280;
+    }
+
+    .pagination {
+      display: flex;
+      gap: 8px;
+    }
+
+    .pagination button {
+      padding: 8px 12px;
+      background-color: #f9fafb;
+      color: #4b5563;
+      border: 1px solid #d1d5db;
+      border-radius: 5px;
+      font-size: 14px;
+    }
+
+    .pagination button.active {
+      background-color: #2563eb;
+      color: white;
+      border-color: #2563eb;
+    }
+
+    /* Loading spinner */
+    .spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #3498db;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 2s linear infinite;
+      margin: 20px auto;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    /* Status dropdown */
+    .status-dropdown {
+      padding: 4px 8px;
+      border-radius: 4px;
+      border: 1px solid #d1d5db;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    
+    .status-dropdown.pending {
+      background-color: #fffbeb;
+      color: #d97706;
+    }
+    
+    .status-dropdown.in-progress {
+      background-color: #eff6ff;
+      color: #2563eb;
+    }
+    
+    .status-dropdown.scheduled {
+      background-color: #f5f3ff;
+      color: #7c3aed;
+    }
+    
+    .status-dropdown.resolved {
+      background-color: #ecfdf5;
+      color: #059669;
+    }
+    
+    /* New style for PDF button */
+    .pdf-btn {
+      background-color: #dc2626;
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      font-size: 14px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-bottom: 5px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .pdf-btn:hover {
+      background-color: #b91c1c;
+    }
+
+    /* Added style for the month filter */
+    .filter-item select#monthFilter {
+      min-width: 150px;
+    }
+    
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <h2>JIABONG LGU ADMIN</h2>
+
+    <a class="nav-link" href="MainAdmin.html">
+      <i class="fas fa-chart-bar"></i> <span>Dashboard</span>
+    </a>
+
+    <a class="nav-link" href="brgy-accounts.html">
+      <i class="fas fa-users-cog"></i> <span>Manage Brgy Accounts</span>
+    </a>
+    <a class="nav-link" href="view-reports.html">
+      <i class="fas fa-folder-open"></i> <span>View All Reports</span>
+    </a>
+    <a class="nav-link" href="urgent-cases.html">
+      <i class="fas fa-exclamation-circle"></i> <span>Urgent Cases</span>
+    </a>
+    <a class="nav-link" href="schedule.html">
+      <i class="fas fa-calendar-alt"></i> <span>Scheduled Responses</span>
+    </a>
+
+    <!-- Logout Button -->
+    <div class="logout-btn" onclick="logout()">
+      <i class="fas fa-sign-out-alt"></i> Logout
+    </div>
+  </div>
+
+  <div class="main-content">
+    <div class="notification-banner">
+      <span>Scheduled Response Monitoring - Non-Urgent Cases Only</span>
+    </div>
+    
+    <section class="section">
+      <h3>Non-Urgent Cases</h3>
+      <div class="filters">
+        <div class="filter-item">
+          <label for="statusFilter">Status</label>
+          <select id="statusFilter" onchange="filterTable()">
+            <option value="all">All Status</option>
+            <option value="Pending">Pending</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Scheduled">Scheduled</option>
+            <option value="Resolved">Resolved</option>
+          </select>
+        </div>
+        <div class="filter-item">
+          <label for="brgyFilter">Barangay</label>
+          <select id="brgyFilter" onchange="filterTable()">
+            <option value="all">All Barangays</option>
+            <!-- Barangay options will be populated by JavaScript -->
+          </select>
+        </div>
+        
+        <!-- NEW: Month Filter -->
+        <div class="filter-item">
+          <label for="monthFilter">Month</label>
+          <select id="monthFilter" onchange="filterTable()">
+            <option value="all">All Months</option>
+            <option value="0">January</option>
+            <option value="1">February</option>
+            <option value="2">March</option>
+            <option value="3">April</option>
+            <option value="4">May</option>
+            <option value="5">June</option>
+            <option value="6">July</option>
+            <option value="7">August</option>
+            <option value="8">September</option>
+            <option value="9">October</option>
+            <option value="10">November</option>
+            <option value="11">December</option>
+          </select>
+        </div>
+        
+        <div class="filter-item">
+          <label for="searchInput">Search</label>
+          <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Search cases...">
+        </div>
+        <!-- PDF Download Button -->
+        <div class="filter-item" style="display: flex; align-items: flex-end;">
+          <button id="downloadPdf" class="pdf-btn">
+            <i class="fas fa-file-pdf"></i> Download PDF
+          </button>
+        </div>
+      </div>
+      
+      <div class="table-container">
+        <div id="loadingSpinner" class="spinner" style="display: none;"></div>
+        
+        <table id="casesTable">
+          <thead>
+            <tr style="color: #1d4ed8;">
+              <th>Case #</th>
+              <th>Category</th>
+              <th>Blotter Type</th>
+              <th>Incident Type</th>
+              <th>Barangay</th>
+              <th>Reporter</th>
+              <th>Email</th>
+              <th>Description</th>
+              <th>Date Submitted</th>
+              <th>Incident Time</th>
+              <th>Specific Location</th>
+              <th>Urgent?</th>
+              <th>Schedule</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="casesTableBody">
+            <!-- Table content will be populated by JavaScript -->
+          </tbody>
+        </table>
+        
+        <div class="table-controls">
+          <div class="entries" id="entriesInfo">Showing 0 entries</div>
+          <!-- Pagination buttons removed as requested -->
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Schedule Modal -->
+  <div id="scheduleModal" class="modal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);">
+    <div style="background-color: #fefefe; margin: 10% auto; padding: 20px; border-radius: 8px; width: 50%;">
+      <h2>Schedule Response</h2>
+      <form id="scheduleForm">
+        <div style="margin-bottom: 15px;">
+          <label for="caseNumber">Case Number:</label>
+          <input type="text" id="caseNumber" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" readonly>
+        </div>
+        <div style="margin-bottom: 15px;">
+          <label for="responseDate">Response Date:</label>
+          <input type="date" id="responseDate" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" required>
+        </div>
+        <div style="margin-bottom: 15px;">
+          <label for="responseTime">Response Time:</label>
+          <input type="time" id="responseTime" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" required>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 10px;">
+          <button type="button" onclick="closeScheduleModal()" style="background-color: #6b7280;">Cancel</button>
+          <button type="submit">Schedule Response</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // Firebase configuration - REPLACE WITH YOUR ACTUAL CONFIG
+    const firebaseConfig = {
+      apiKey: "AIzaSyCSUCbCVKEYZx_-dySDrAauf1OZ6GIUMgI",
+      authDomain: "bpoms-15479.firebaseapp.com",
+      databaseURL: "https://bpoms-15479-default-rtdb.firebaseio.com",
+      projectId: "bpoms-15479",
+      storageBucket: "bpoms-15479.appspot.com",
+      messagingSenderId: "461076757426",
+      appId: "1:461076757426:web:61adf7d3f1734cc05702ab"
+    };
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
+    // Global variables
+    let casesData = [];
+    let barangays = new Set();
+    let filteredCases = []; // To store currently filtered cases
+
+    // Function to show loading spinner
+    function showLoading() {
+      document.getElementById('loadingSpinner').style.display = 'block';
+      document.getElementById('casesTable').style.opacity = '0.5';
+    }
+
+    // Function to hide loading spinner
+    function hideLoading() {
+      document.getElementById('loadingSpinner').style.display = 'none';
+      document.getElementById('casesTable').style.opacity = '1';
+    }
+
+    // Function to load cases from Firebase Submitted node where isUrgent is false
+    function loadCasesFromFirebase() {
+      showLoading();
+      const submittedRef = database.ref('Submitted');
+      
+      submittedRef.on('value', (snapshot) => {
+        casesData = [];
+        barangays.clear();
+        
+        snapshot.forEach((childSnapshot) => {
+          const caseData = childSnapshot.val();
+          // Check if isUrgent is false or not set (non-urgent)
+          if (caseData.isUrgent === false || caseData.isUrgent === "false" || 
+              !caseData.isUrgent || caseData.urgent === "No") {
+            caseData.id = childSnapshot.key; // Store the Firebase ID
+            casesData.push(caseData);
+            
+            // Add barangay to our set if it exists
+            if (caseData.barangay) {
+              barangays.add(caseData.barangay);
+            }
+          }
+        });
+        
+        // Populate barangay filter dropdown
+        populateBarangayFilter();
+        
+        hideLoading();
+        renderCasesTable();
+      }, (error) => {
+        hideLoading();
+        console.error('Error loading data:', error);
+        alert('Error loading data from database.');
+      });
+    }
+
+    // Function to populate barangay filter dropdown
+    function populateBarangayFilter() {
+      const brgyFilter = document.getElementById('brgyFilter');
+      
+      // Clear existing options except the first one
+      while (brgyFilter.options.length > 1) {
+        brgyFilter.remove(1);
+      }
+      
+      // Add barangays from our set
+      barangays.forEach(barangay => {
+        const option = document.createElement('option');
+        option.value = barangay;
+        option.textContent = barangay;
+        brgyFilter.appendChild(option);
+      });
+    }
+
+    // Function to add a new case to Firebase
+    function addCaseToFirebase(caseData) {
+      showLoading();
+      const newCaseRef = database.ref('Submitted').push();
+      return newCaseRef.set(caseData)
+        .then(() => {
+          hideLoading();
+          return newCaseRef.key; // Return the generated ID
+        })
+        .catch((error) => {
+          hideLoading();
+          console.error('Error adding case:', error);
+          alert('Error adding case to database.');
+          throw error;
+        });
+    }
+
+    // Function to update a case in Firebase
+    function updateCaseInFirebase(caseId, updates) {
+      showLoading();
+      return database.ref('Submitted/' + caseId).update(updates)
+        .then(() => {
+          hideLoading();
+        })
+        .catch((error) => {
+          hideLoading();
+          console.error('Error updating case:', error);
+          alert('Error updating case in database.');
+          throw error;
+        });
+    }
+
+    // Function to render the table with cases data
+    function renderCasesTable() {
+      const tableBody = document.getElementById('casesTableBody');
+      tableBody.innerHTML = '';
+      
+      // Update filteredCases to match all cases initially
+      filteredCases = [...casesData];
+      
+      if (casesData.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="15" style="text-align: center;">No non-urgent cases found</td></tr>`;
+        document.getElementById('entriesInfo').textContent = 'Showing 0 entries';
+        return;
+      }
+      
+      casesData.forEach(caseItem => {
+        const row = document.createElement('tr');
+        
+        // Determine urgency status based on different possible field names
+        let isUrgent = false;
+        if (caseItem.isUrgent === true || caseItem.isUrgent === "true" || 
+            caseItem.urgent === "Yes" || caseItem.urgent === true) {
+          isUrgent = true;
+        }
+        
+        // Apply different styling for urgent cases (though we're filtering them out)
+        if (isUrgent) {
+          row.style.backgroundColor = "#fef2f2";
+        }
+        
+        // Get current status or default to Pending
+        const currentStatus = caseItem.status || 'Pending';
+        
+        row.innerHTML = `
+          <td>${caseItem.caseNumber || 'N/A'}</td>
+          <td>${caseItem.category || 'N/A'}</td>
+          <td>${caseItem.blotterType || 'N/A'}</td>
+          <td>${caseItem.incidentType || 'N/A'}</td>
+          <td>${caseItem.barangay || 'N/A'}</td>
+          <td>${caseItem.reporter || 'N/A'}</td>
+          <td>${caseItem.email || 'N/A'}</td>
+          <td>${caseItem.description || 'N/A'}</td>
+          <td>${caseItem.dateSubmitted || 'N/A'}</td>
+          <td>${caseItem.incidentTime || 'N/A'}</td>
+          <td>${caseItem.specificLocation || 'N/A'}</td>
+          <td>No</td>
+          <td>${caseItem.schedule || 'Not scheduled'}</td>
+          <td>
+            <select class="status-dropdown ${currentStatus.toLowerCase().replace(' ', '-')}" 
+                    onchange="updateStatus('${caseItem.id}', this.value)" 
+                    data-case-id="${caseItem.id}">
+              <option value="Pending" ${currentStatus === 'Pending' ? 'selected' : ''}>Pending</option>
+              <option value="In Progress" ${currentStatus === 'In Progress' ? 'selected' : ''}>In Progress</option>
+              <option value="Scheduled" ${currentStatus === 'Scheduled' ? 'selected' : ''}>Scheduled</option>
+              <option value="Resolved" ${currentStatus === 'Resolved' ? 'selected' : ''}>Resolved</option>
+            </select>
+          </td>
+          <td>
+            <button class="action-btn schedule-btn" onclick="openScheduleModal('${caseItem.id}', '${caseItem.caseNumber || 'N/A'}')">
+              <i class="fas fa-calendar-plus"></i> Schedule
+            </button>
+          </td>
+        `;
+        
+        tableBody.appendChild(row);
+      });
+      
+      // Update entries info
+      document.getElementById('entriesInfo').textContent = 
+        `Showing ${casesData.length} non-urgent cases`;
+    }
+
+    // Function to update status
+    function updateStatus(caseId, newStatus) {
+      updateCaseInFirebase(caseId, { status: newStatus })
+        .then(() => {
+          // Update the dropdown class to reflect the new status
+          const dropdown = document.querySelector(`.status-dropdown[data-case-id="${caseId}"]`);
+          dropdown.className = `status-dropdown ${newStatus.toLowerCase().replace(' ', '-')}`;
+        })
+        .catch(error => {
+          console.error('Error updating status:', error);
+          alert('Error updating status. Please try again.');
+        });
+    }
+
+    // Function to filter the table based on selected filters
+    function filterTable() {
+      const statusFilter = document.getElementById('statusFilter').value;
+      const brgyFilter = document.getElementById('brgyFilter').value;
+      const monthFilter = document.getElementById('monthFilter').value; // Get month filter
+      const searchText = document.getElementById('searchInput').value.toLowerCase();
+      
+      const rows = document.getElementById('casesTableBody').getElementsByTagName('tr');
+      
+      // Reset filteredCases
+      filteredCases = [];
+      
+      for (let i = 0; i < casesData.length; i++) {
+        const caseItem = casesData[i];
+        const status = caseItem.status || 'Pending';
+        const barangay = caseItem.barangay || '';
+        const caseText = Object.values(caseItem).join(' ').toLowerCase();
+        
+        // Check month filter if set
+        let monthMatch = true;
+        if (monthFilter !== 'all') {
+          // Extract month from dateSubmitted field
+          const dateSubmitted = caseItem.dateSubmitted;
+          if (dateSubmitted) {
+            try {
+              // Try to parse the date - handle different formats
+              const dateObj = new Date(dateSubmitted);
+              if (!isNaN(dateObj)) {
+                monthMatch = dateObj.getMonth() === parseInt(monthFilter);
+              } else {
+                // Try alternative parsing for different date formats
+                const dateParts = dateSubmitted.split(/[/-]/);
+                if (dateParts.length >= 2) {
+                  const monthPart = parseInt(dateParts[0]) - 1; // Convert to 0-indexed
+                  monthMatch = monthPart === parseInt(monthFilter);
+                } else {
+                  monthMatch = false; // Can't parse date, so doesn't match
+                }
+              }
+            } catch (e) {
+              monthMatch = false; // Error parsing date
+            }
+          } else {
+            monthMatch = false; // No date submitted
+          }
+        }
+        
+        const statusMatch = statusFilter === 'all' || status === statusFilter;
+        const brgyMatch = brgyFilter === 'all' || barangay === brgyFilter;
+        const searchMatch = caseText.includes(searchText);
+        
+        if (statusMatch && brgyMatch && monthMatch && searchMatch) {
+          // This case matches the filters, add to filteredCases
+          filteredCases.push(caseItem);
+          
+          // Show the corresponding row
+          if (rows[i]) rows[i].style.display = '';
+        } else {
+          // Hide the corresponding row
+          if (rows[i]) rows[i].style.display = 'none';
+        }
+      }
+      
+      // Update entries count after filtering
+      document.getElementById('entriesInfo').textContent = `Showing ${filteredCases.length} non-urgent cases`;
+    }
+
+    // Function to open schedule modal
+    function openScheduleModal(caseId = '', caseNumber = '') {
+      const modal = document.getElementById('scheduleModal');
+      if (caseId && caseNumber) {
+        document.getElementById('caseNumber').value = caseNumber;
+        document.getElementById('caseNumber').dataset.caseId = caseId;
+      }
+      modal.style.display = 'block';
+    }
+
+    // Function to close schedule modal
+    function closeScheduleModal() {
+      document.getElementById('scheduleModal').style.display = 'none';
+      document.getElementById('scheduleForm').reset();
+      document.getElementById('caseNumber').dataset.caseId = '';
+    }
+
+    // Function to handle schedule form submission
+    document.getElementById('scheduleForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const caseId = document.getElementById('caseNumber').dataset.caseId;
+      const caseNumber = document.getElementById('caseNumber').value;
+      const date = document.getElementById('responseDate').value;
+      const time = document.getElementById('responseTime').value;
+      
+      if (!caseId) {
+        alert('No case selected for scheduling.');
+        return;
+      }
+      
+      const updates = {
+        schedule: `${date} ${time}`,
+        status: 'Scheduled'
+      };
+      
+      updateCaseInFirebase(caseId, updates)
+        .then(() => {
+          closeScheduleModal();
+          alert(`Response scheduled successfully for ${caseNumber}`);
+        })
+        .catch(error => {
+          console.error('Error scheduling response:', error);
+        });
+    });
+
+    // Function to generate and download PDF in landscape with all fields
+    function generatePDF() {
+      // Check if there's any data to export
+      if (filteredCases.length === 0) {
+        alert('No data available to export.');
+        return;
+      }
+      
+      showLoading();
+      
+      try {
+        // Create new PDF document in landscape
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('landscape');
+        
+        // Add title
+        doc.setFontSize(16);
+        doc.text('Scheduled Responses - Non-Urgent Cases', 14, 15);
+        doc.setFontSize(10);
+        doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 22);
+        
+        // Prepare table data with all fields
+        const tableData = filteredCases.map(caseItem => [
+          caseItem.caseNumber || 'N/A',
+          caseItem.category || 'N/A',
+          caseItem.blotterType || 'N/A',
+          caseItem.incidentType || 'N/A',
+          caseItem.barangay || 'N/A',
+          caseItem.reporter || 'N/A',
+          caseItem.email || 'N/A',
+          caseItem.description || 'N/A',
+          caseItem.dateSubmitted || 'N/A',
+          caseItem.incidentTime || 'N/A',
+          caseItem.specificLocation || 'N/A',
+          'No', // Urgent field is always "No" for non-urgent cases
+          caseItem.schedule || 'Not scheduled',
+          caseItem.status || 'Pending'
+        ]);
+        
+        // Create the table with all columns
+        doc.autoTable({
+          head: [
+            ['Case #', 'Category', 'Blotter Type', 'Incident Type', 'Barangay', 'Reporter', 
+             'Email', 'Description', 'Date Submitted', 'Incident Time', 'Location', 
+             'Urgent?', 'Schedule', 'Status']
+          ],
+          body: tableData,
+          startY: 30,
+          theme: 'grid',
+          headStyles: {
+            fillColor: [37, 100, 235],
+            textColor: 255,
+            fontStyle: 'bold'
+          },
+          alternateRowStyles: {
+            fillColor: [240, 240, 240]
+          },
+          margin: { top: 30 },
+          styles: {
+            fontSize: 7,
+            cellPadding: 2,
+            overflow: 'linebreak',
+            cellWidth: 'wrap'
+          },
+          columnStyles: {
+            0: { cellWidth: 15 },
+            1: { cellWidth: 15 },
+            2: { cellWidth: 15 },
+            3: { cellWidth: 15 },
+            4: { cellWidth: 15 },
+            5: { cellWidth: 15 },
+            6: { cellWidth: 20 },
+            7: { cellWidth: 40 }, // Wider for description
+            8: { cellWidth: 20 },
+            9: { cellWidth: 20 },
+            10: { cellWidth: 25 },
+            11: { cellWidth: 15 },
+            12: { cellWidth: 20 },
+            13: { cellWidth: 20 }
+          }
+        });
+        
+        // Save the PDF
+        doc.save('scheduled-responses-report.pdf');
+      } catch (error) {
+        console.error('Error generating PDF:', error);
+        alert('Error generating PDF. Please try again.');
+      } finally {
+        hideLoading();
+      }
+    }
+
+    // Logout function
+    function logout() {
+      window.location.href = "index.html";
+    }
+
+    // Initialize the application when page loads
+    window.onload = function() {
+      loadCasesFromFirebase();
+      
+      // Add event listener for PDF download button
+      document.getElementById('downloadPdf').addEventListener('click', generatePDF);
+    };
+
+    // Close modal if user clicks outside of it
+    window.onclick = function(event) {
+      const modal = document.getElementById('scheduleModal');
+      if (event.target === modal) {
+        closeScheduleModal();
+      }
+    };
+  </script>
+</body>
+</html>
