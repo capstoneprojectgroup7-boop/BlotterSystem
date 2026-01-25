@@ -296,6 +296,36 @@
       box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
 
+    /* Print Button */
+.print-btn {
+  background: #059669;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  transition: all 0.2s ease-in-out;
+  margin-right: 12px;
+}
+.print-btn:hover {
+  background: #047857; 
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+/* Export container adjustments */
+.export-container {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
     /* Table */
     .report-table {
       width: 100%;
@@ -1285,6 +1315,31 @@
       }
     }
 
+    /* Add to existing CSS */
+.date-filter {
+  min-width: 140px;
+  font-family: 'Inter', sans-serif;
+  color: #374151;
+}
+
+.date-filter:focus {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+}
+
+/* Responsive adjustments for date filters */
+@media (max-width: 768px) {
+  .date-filter {
+    min-width: calc(50% - 4px);
+  }
+}
+
+@media (max-width: 480px) {
+  .date-filter {
+    min-width: 100%;
+  }
+}
+
   </style>
 </head>
 <body>
@@ -1323,48 +1378,63 @@
           <button class="type-btn" onclick="openModal('incident')">
             <i class="fas fa-clipboard-list"></i> Incident Types
           </button>
+
+           <!-- Add this after the filter-container div -->
+<button class="type-btn" onclick="clearFilters()" style="margin-left: auto;">
+  <i class="fas fa-filter-circle-xmark"></i> Clear Filters
+</button>
         </div>
         
+        
         <!-- Filter container with search and dropdowns -->
-        <div class="filter-container">
-          <!-- Search box -->
-          <div class="search-box">
-            <input type="text" id="searchInput" placeholder="Search reports...">
-            <i class="fas fa-search"></i>
-          </div>
-          
-          <!-- Month filter dropdown -->
-          <select class="filter-dropdown" id="monthFilter">
-            <option value="">All Months</option>
-            <option value="01">January</option>
-            <option value="02">February</option>
-            <option value="03">March</option>
-            <option value="04">April</option>
-            <option value="05">May</option>
-            <option value="06">June</option>
-            <option value="07">July</option>
-            <option value="08">August</option>
-            <option value="09">September</option>
-            <option value="10">October</option>
-            <option value="11">November</option>
-            <option value="12">December</option>
-          </select>
-          
-          <!-- Status filter dropdown -->
-          <select class="filter-dropdown" id="statusFilter">
-            <option value="">All Statuses</option>
-            <option value="Pending">Pending</option>
-            <option value="In Progress">In Progress</option>
-            <option value="Resolved">Resolved</option>
-          </select>
-          
-          <!-- Urgent filter dropdown -->
-          <select class="filter-dropdown" id="urgentFilter">
-            <option value="">All Reports</option>
-            <option value="true">Urgent Only</option>
-            <option value="false">Non-Urgent Only</option>
-          </select>
-        </div>
+<div class="filter-container">
+  <!-- Search box -->
+  <div class="search-box">
+    <input type="text" id="searchInput" placeholder="Search reports...">
+    <i class="fas fa-search"></i>
+  </div>
+  
+  <!-- Month filter dropdown -->
+  <select class="filter-dropdown" id="monthFilter">
+    <option value="">All Months</option>
+    <option value="01">January</option>
+    <option value="02">February</option>
+    <option value="03">March</option>
+    <option value="04">April</option>
+    <option value="05">May</option>
+    <option value="06">June</option>
+    <option value="07">July</option>
+    <option value="08">August</option>
+    <option value="09">September</option>
+    <option value="10">October</option>
+    <option value="11">November</option>
+    <option value="12">December</option>
+  </select>
+  
+  <!-- Status filter dropdown -->
+  <select class="filter-dropdown" id="statusFilter">
+    <option value="">All Statuses</option>
+    <option value="Pending">Pending</option>
+    <option value="In Progress">In Progress</option>
+    <option value="Resolved">Resolved</option>
+  </select>
+  
+  <!-- Urgent filter dropdown -->
+  <select class="filter-dropdown" id="urgentFilter">
+    <option value="">All Reports</option>
+    <option value="true">Urgent Only</option>
+    <option value="false">Non-Urgent Only</option>
+  </select>
+  
+  <!-- Date range filter -->
+
+<h6>Start Date</h6>
+  <input type="date" class="filter-dropdown date-filter" id="dateFromFilter" placeholder="From Date">
+  <h6>End Date</h6>
+  <input type="date" class="filter-dropdown date-filter" id="dateToFilter" placeholder="To Date">
+      
+ 
+</div>
       </div>
 
       <div class="table-container">
@@ -1395,12 +1465,17 @@
         </table>
       </div>
 
-      <!-- Export button positioned at bottom right after the table -->
-      <div class="export-container">
-        <button class="export-btn" onclick="exportPDF()">
-          <i class="fas fa-file-pdf"></i> Export to PDF
-        </button>
-      </div>
+      
+
+      <!-- Export buttons positioned at bottom right after the table -->
+<div class="export-container">
+  <button class="print-btn" onclick="printTable()">
+    <i class="fas fa-print"></i> Print Table
+  </button>
+  <button class="export-btn" onclick="exportPDF()">
+    <i class="fas fa-file-pdf"></i> Export to PDF
+  </button>
+</div>
     </div>
   </div>
 
@@ -1876,111 +1951,152 @@
     }
 
     // 🔹 Filter reports based on search and dropdown filters
-    function filterReports() {
-      const searchText = document.getElementById('searchInput').value.toLowerCase();
-      const selectedMonth = document.getElementById('monthFilter').value;
-      const selectedStatus = document.getElementById('statusFilter').value;
-      const selectedUrgent = document.getElementById('urgentFilter').value;
-      
-      const tableBody = document.querySelector("#reportTable tbody");
-      const rows = tableBody.querySelectorAll('tr');
-      
-      rows.forEach(row => {
-        // Skip if this is an empty state row or doesn't have enough cells
-        if (row.classList.contains('empty-state-row') || row.cells.length < 18) return;
-        
-        let showRow = true;
-        
-        // Search filter
-        if (searchText) {
-          let found = false;
-          for (let i = 0; i < row.cells.length; i++) {
-            const cellText = row.cells[i].textContent.toLowerCase();
-            if (cellText.includes(searchText)) {
-              found = true;
-              break;
-            }
-          }
-          // Also check select values
-          if (!found) {
-            const select = row.querySelector("select");
-            if (select && select.value.toLowerCase().includes(searchText)) {
-              found = true;
-            }
-          }
-          if (!found) showRow = false;
+   // 🔹 Filter reports based on search and dropdown filters
+function filterReports() {
+  const searchText = document.getElementById('searchInput').value.toLowerCase();
+  const selectedMonth = document.getElementById('monthFilter').value;
+  const selectedStatus = document.getElementById('statusFilter').value;
+  const selectedUrgent = document.getElementById('urgentFilter').value;
+  const dateFrom = document.getElementById('dateFromFilter').value;
+  const dateTo = document.getElementById('dateToFilter').value;
+  
+  const tableBody = document.querySelector("#reportTable tbody");
+  const rows = tableBody.querySelectorAll('tr');
+  
+  rows.forEach(row => {
+    // Skip if this is an empty state row or doesn't have enough cells
+    if (row.classList.contains('empty-state-row') || row.cells.length < 18) return;
+    
+    let showRow = true;
+    
+    // Search filter
+    if (searchText) {
+      let found = false;
+      for (let i = 0; i < row.cells.length; i++) {
+        const cellText = row.cells[i].textContent.toLowerCase();
+        if (cellText.includes(searchText)) {
+          found = true;
+          break;
         }
-        
-        // Month filter
-        if (selectedMonth && showRow) {
-          const dateCell = row.cells[8]; // Date Submitted column
-          if (dateCell) {
-            const dateText = dateCell.textContent;
-            if (dateText) {
-              const date = new Date(dateText);
-              const month = (date.getMonth() + 1).toString().padStart(2, '0');
-              if (month !== selectedMonth) {
-                showRow = false;
-              }
-            } else {
-              showRow = false;
-            }
-          }
+      }
+      // Also check select values
+      if (!found) {
+        const select = row.querySelector("select");
+        if (select && select.value.toLowerCase().includes(searchText)) {
+          found = true;
         }
-        
-        // Status filter
-        if (selectedStatus && showRow) {
-          const statusSelect = row.querySelector("select");
-          if (statusSelect && statusSelect.value !== selectedStatus) {
+      }
+      if (!found) showRow = false;
+    }
+    
+    // Month filter
+    if (selectedMonth && showRow) {
+      const dateCell = row.cells[8]; // Date Submitted column
+      if (dateCell) {
+        const dateText = dateCell.textContent;
+        if (dateText) {
+          const date = new Date(dateText);
+          const month = (date.getMonth() + 1).toString().padStart(2, '0');
+          if (month !== selectedMonth) {
             showRow = false;
           }
+        } else {
+          showRow = false;
         }
-        
-        // Urgent filter
-        if (selectedUrgent && showRow) {
-          const urgentCell = row.cells[12]; // Urgent column
-          if (urgentCell) {
-            const isUrgent = urgentCell.textContent.includes("✅");
-            if (selectedUrgent === "true" && !isUrgent) {
-              showRow = false;
-            } else if (selectedUrgent === "false" && isUrgent) {
-              showRow = false;
-            }
-          }
-        }
-        
-        row.style.display = showRow ? "" : "none";
-      });
-      
-      // Check if any rows are visible
-      const visibleRows = Array.from(rows).some(row => 
-        row.style.display !== 'none' && 
-        !row.classList.contains('empty-state-row') && 
-        row.cells.length > 17
-      );
-      
-      // If no rows are visible, show a message
-      if (!visibleRows) {
-        // Remove any existing empty state
-        const existingEmptyState = tableBody.querySelector('.empty-state-row');
-        if (existingEmptyState) existingEmptyState.remove();
-        
-        const emptyRow = document.createElement('tr');
-        emptyRow.className = 'empty-state-row';
-        emptyRow.innerHTML = `
-          <td colspan="18" class="empty-state">
-            <i class="fas fa-search"></i>
-            <p>No reports match your filters</p>
-            <p>Try adjusting your search criteria</p>
-          </td>
-        `;
-        tableBody.appendChild(emptyRow);
-      } else {
-        // Remove empty state if there are visible rows
-        const existingEmptyState = tableBody.querySelector('.empty-state-row');
-        if (existingEmptyState) existingEmptyState.remove();
       }
     }
+    
+    // Status filter
+    if (selectedStatus && showRow) {
+      const statusSelect = row.querySelector("select");
+      if (statusSelect && statusSelect.value !== selectedStatus) {
+        showRow = false;
+      }
+    }
+    
+    // Urgent filter
+    if (selectedUrgent && showRow) {
+      const urgentCell = row.cells[12]; // Urgent column
+      if (urgentCell) {
+        const isUrgent = urgentCell.textContent.includes("✅");
+        if (selectedUrgent === "true" && !isUrgent) {
+          showRow = false;
+        } else if (selectedUrgent === "false" && isUrgent) {
+          showRow = false;
+        }
+      }
+    }
+    
+    // Date range filter
+    if ((dateFrom || dateTo) && showRow) {
+      const dateCell = row.cells[8]; // Date Submitted column
+      if (dateCell) {
+        const dateText = dateCell.textContent;
+        if (dateText) {
+          const cellDate = new Date(dateText);
+          if (!isNaN(cellDate.getTime())) {
+            // If "From Date" is set, check if cell date is on or after it
+            if (dateFrom) {
+              const fromDate = new Date(dateFrom);
+              fromDate.setHours(0, 0, 0, 0);
+              const cellDateOnly = new Date(cellDate);
+              cellDateOnly.setHours(0, 0, 0, 0);
+              
+              if (cellDateOnly < fromDate) {
+                showRow = false;
+              }
+            }
+            
+            // If "To Date" is set, check if cell date is on or before it
+            if (dateTo && showRow) {
+              const toDate = new Date(dateTo);
+              toDate.setHours(23, 59, 59, 999);
+              
+              if (cellDate > toDate) {
+                showRow = false;
+              }
+            }
+          } else {
+            showRow = false;
+          }
+        } else {
+          showRow = false;
+        }
+      }
+    }
+    
+    row.style.display = showRow ? "" : "none";
+  });
+  
+  // Check if any rows are visible
+  const visibleRows = Array.from(rows).some(row => 
+    row.style.display !== 'none' && 
+    !row.classList.contains('empty-state-row') && 
+    row.cells.length > 17
+  );
+  
+  // If no rows are visible, show a message
+  if (!visibleRows) {
+    // Remove any existing empty state
+    const existingEmptyState = tableBody.querySelector('.empty-state-row');
+    if (existingEmptyState) existingEmptyState.remove();
+    
+    const emptyRow = document.createElement('tr');
+    emptyRow.className = 'empty-state-row';
+    emptyRow.innerHTML = `
+      <td colspan="18" class="empty-state">
+        <i class="fas fa-search"></i>
+        <p>No reports match your filters</p>
+        <p>Try adjusting your search criteria</p>
+      </td>
+    `;
+    tableBody.appendChild(emptyRow);
+  } else {
+    // Remove empty state if there are visible rows
+    const existingEmptyState = tableBody.querySelector('.empty-state-row');
+    if (existingEmptyState) existingEmptyState.remove();
+  }
+}
 
     // 🔹 Fetch Reports from Firebase filtered by admin's barangay
     function loadReports() {
@@ -2519,7 +2635,9 @@ On ${formattedDate}, at around ${incidentTime || '[time]'}, while I was at ${cur
       document.getElementById('monthFilter').addEventListener('change', filterReports);
       document.getElementById('statusFilter').addEventListener('change', filterReports);
       document.getElementById('urgentFilter').addEventListener('change', filterReports);
-      
+      // Add this to your existing event listeners in DOMContentLoaded
+document.getElementById('dateFromFilter').addEventListener('change', filterReports);
+document.getElementById('dateToFilter').addEventListener('change', filterReports);
       // Close full image modal when clicking outside
       document.getElementById('fullImageModal').addEventListener('click', function(e) {
         if (e.target === this) {
@@ -2618,6 +2736,314 @@ On ${formattedDate}, at around ${incidentTime || '[time]'}, while I was at ${cur
       window.print();
     }
 
+    // 🔹 Print Table with current filters applied - Generates actual HTML table
+// 🔹 Print Table with current filters applied
+function printTable() {
+  // Get filter values for header
+  const selectedMonth = document.getElementById('monthFilter').value;
+  const selectedStatus = document.getElementById('statusFilter').value;
+  const selectedUrgent = document.getElementById('urgentFilter').value;
+  const searchText = document.getElementById('searchInput').value;
+  const dateFrom = document.getElementById('dateFromFilter').value;
+  const dateTo = document.getElementById('dateToFilter').value;
+  
+  // Create a temporary print window
+  const printWindow = window.open('', '_blank', 'width=1200,height=800');
+  
+  // Create header with filter information
+  let filterHeader = '';
+  if (selectedMonth || selectedStatus || selectedUrgent || searchText || dateFrom || dateTo) {
+    filterHeader = '<div style="margin: 10px 0; padding: 10px; background: #f8fafc; border-left: 4px solid #4f46e5;">';
+    filterHeader += '<strong>Filters Applied:</strong> ';
+    const filters = [];
+    
+    if (selectedMonth) {
+      const monthNames = ["January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"];
+      filters.push(`Month: ${monthNames[parseInt(selectedMonth)-1]}`);
+    }
+    if (selectedStatus) filters.push(`Status: ${selectedStatus}`);
+    if (selectedUrgent) filters.push(`Urgent: ${selectedUrgent === 'true' ? 'Yes' : 'No'}`);
+    if (searchText) filters.push(`Search: "${searchText}"`);
+    if (dateFrom) filters.push(`From: ${formatDateForDisplay(dateFrom)}`);
+    if (dateTo) filters.push(`To: ${formatDateForDisplay(dateTo)}`);
+    
+    filterHeader += filters.join(', ');
+    filterHeader += '</div>';
+  }
+  
+  // Get only visible rows (respecting current filters)
+  const table = document.getElementById("reportTable");
+  const visibleRows = Array.from(table.querySelectorAll("tbody tr"))
+    .filter(row => row.style.display !== 'none' && 
+                   !row.classList.contains('empty-state-row') && 
+                   row.cells.length > 17);
+  
+  if (visibleRows.length === 0) {
+    printWindow.document.write('<h3>No reports to print</h3>');
+    printWindow.document.close();
+    printWindow.focus();
+    return;
+  }
+  
+  // Build the printable table HTML
+  let printHTML = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Reports Table - ${adminBarangay}</title>
+      <style>
+        body {
+          font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+          margin: 20px;
+          color: #333;
+        }
+        .print-header {
+          text-align: center;
+          margin-bottom: 20px;
+          border-bottom: 2px solid #1e293b;
+          padding-bottom: 15px;
+        }
+        .print-header h1 {
+          color: #1e293b;
+          margin: 0 0 5px 0;
+          font-size: 24px;
+        }
+        .print-header p {
+          color: #64748b;
+          margin: 5px 0;
+          font-size: 14px;
+        }
+        .print-meta {
+          text-align: right;
+          margin-bottom: 15px;
+          color: #6b7280;
+          font-size: 12px;
+        }
+        .print-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 10px;
+          font-size: 11px;
+        }
+        .print-table th {
+          background-color: #f8fafc;
+          color: #374151;
+          font-weight: 600;
+          text-align: left;
+          padding: 8px;
+          border: 1px solid #e2e8f0;
+          font-size: 10px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+        .print-table td {
+          padding: 6px 8px;
+          border: 1px solid #f1f5f9;
+          vertical-align: top;
+        }
+        .print-table tr:nth-child(even) {
+          background-color: #f8fafc;
+        }
+        .status-badge {
+          padding: 2px 6px;
+          border-radius: 12px;
+          font-size: 10px;
+          font-weight: 500;
+          display: inline-block;
+        }
+        .status-pending {
+          background-color: #fef3c7;
+          color: #d97706;
+        }
+        .status-in-progress {
+          background-color: #dbeafe;
+          color: #1d4ed8;
+        }
+        .status-resolved {
+          background-color: #dcfce7;
+          color: #16a34a;
+        }
+        .urgent-yes {
+          color: #dc2626;
+          font-weight: bold;
+        }
+        .urgent-no {
+          color: #64748b;
+        }
+        @media print {
+          body {
+            margin: 0;
+            padding: 10px;
+          }
+          .print-header {
+            page-break-after: avoid;
+          }
+          .print-table {
+            page-break-inside: avoid;
+          }
+          .no-print {
+            display: none;
+          }
+        }
+        .page-break {
+          page-break-before: always;
+        }
+        .summary {
+          margin-top: 20px;
+          padding: 15px;
+          background: #f8fafc;
+          border-radius: 8px;
+          font-size: 13px;
+        }
+        .summary h3 {
+          margin-top: 0;
+          color: #1e293b;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="print-header">
+        <h1>REPORTS MANAGEMENT</h1>
+        <p>${adminBarangay}</p>
+        <p>Generated on ${new Date().toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        })}</p>
+      </div>
+      
+      ${filterHeader}
+      
+      <div class="print-meta">
+        Total Reports: ${visibleRows.length}
+      </div>
+  `;
+  
+  // Create table header
+  printHTML += `
+    <table class="print-table">
+      <thead>
+        <tr>
+          <th>Case#</th>
+          <th>Category</th>
+          <th>Blotter Type</th>
+          <th>Incident Type</th>
+          <th>Barangay</th>
+          <th>Reporter</th>
+          <th>Email</th>
+          <th>Description</th>
+          <th>Date Submitted</th>
+          <th>Incident Time</th>
+          <th>Specific Location</th>
+          <th>Accused</th>
+          <th>Urgent?</th>
+          <th>Status</th>
+          <th>Schedule</th>
+          <th>Admin Feedback</th>
+          <th>Media</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+  
+  // Add table rows
+  visibleRows.forEach((row, index) => {
+    const cells = row.querySelectorAll("td");
+    
+    // Get cell values
+    const caseNumber = cells[0]?.innerText || "N/A";
+    const category = cells[1]?.innerText || "N/A";
+    const blotterType = cells[2]?.innerText || "N/A";
+    const incidentType = cells[3]?.innerText || "N/A";
+    const barangay = cells[4]?.innerText || "N/A";
+    const reporter = cells[5]?.innerText || "N/A";
+    const email = cells[6]?.innerText || "N/A";
+    const description = cells[7]?.innerText || "No description";
+    const dateSubmitted = cells[8]?.innerText || "N/A";
+    const incidentTime = cells[9]?.innerText || "N/A";
+    const specificLocation = cells[10]?.innerText || "N/A";
+    const accused = cells[11]?.innerText || "N/A";
+    const isUrgent = cells[12]?.innerText.includes("✅") ? "Yes" : "No";
+    
+    // Get status from select or badge
+    const statusSelect = cells[13]?.querySelector("select");
+    const status = statusSelect ? statusSelect.value : 
+                   cells[13]?.querySelector('.status-badge')?.innerText || "Pending";
+    
+    // Get status class
+    let statusClass = 'status-pending';
+    if (status === "In Progress") statusClass = 'status-in-progress';
+    if (status === "Resolved") statusClass = 'status-resolved';
+    
+    // Get schedule
+    let schedule = "N/A";
+    if (!isUrgent && cells[14]) {
+      const scheduleInput = cells[14].querySelector('input[type="datetime-local"]');
+      schedule = scheduleInput && scheduleInput.value ? 
+                 formatDateToMMDDYYTime(scheduleInput.value) : "Not scheduled";
+    }
+    
+    // Get feedback (truncate if too long)
+    const feedbackTextarea = cells[15]?.querySelector("textarea");
+    let feedback = feedbackTextarea ? feedbackTextarea.value : "";
+    if (feedback && feedback.length > 100) {
+      feedback = feedback.substring(0, 100) + "...";
+    }
+    if (!feedback) feedback = "No feedback";
+    
+    // Get media count
+    const mediaBtn = cells[16]?.querySelector('.media-btn');
+    const countBadge = mediaBtn ? mediaBtn.querySelector('.media-count-badge') : null;
+    const mediaCount = countBadge ? countBadge.textContent : '0';
+    
+    // Add row to print HTML
+    printHTML += `
+      <tr>
+        <td>${caseNumber}</td>
+        <td>${category}</td>
+        <td>${blotterType}</td>
+        <td>${incidentType}</td>
+        <td>${barangay}</td>
+        <td>${reporter}</td>
+        <td>${email}</td>
+        <td>${description.substring(0, 80)}${description.length > 80 ? '...' : ''}</td>
+        <td>${dateSubmitted}</td>
+        <td>${incidentTime}</td>
+        <td>${specificLocation}</td>
+        <td>${accused}</td>
+        <td class="${isUrgent === 'Yes' ? 'urgent-yes' : 'urgent-no'}">${isUrgent}</td>
+        <td><span class="status-badge ${statusClass}">${status}</span></td>
+        <td>${schedule}</td>
+        <td>${feedback}</td>
+        <td>${mediaCount}</td>
+      </tr>
+    `;
+  });
+  
+  printHTML += `
+      </tbody>
+    </table>
+    
+    <div class="summary">
+      <h3>Summary</h3>
+      <p><strong>Total Reports Printed:</strong> ${visibleRows.length}</p>
+      <p><strong>Barangay:</strong> ${adminBarangay}</p>
+      <p><strong>Print Date:</strong> ${new Date().toLocaleDateString()}</p>
+      ${filterHeader ? '<p><em>Note: This printout includes filtered results only</em></p>' : ''}
+    </div>
+    
+   
+  `;
+  
+  // Write and print
+  printWindow.document.write(printHTML);
+  printWindow.document.close();
+  printWindow.focus();
+  printWindow.print();
+}
     // 🔹 Download Letter as PDF
     function downloadLetter() {
       const { jsPDF } = window.jspdf;
@@ -2895,160 +3321,184 @@ On ${formattedDate}, at around ${incidentTime || '[time]'}, while I was at ${cur
     }
 
     // 🔹 Export Table to PDF with filtering and landscape orientation
-    function exportPDF() {
-      const { jsPDF } = window.jspdf;
-      
-      // Create PDF in landscape orientation
-      const doc = new jsPDF({
-        orientation: 'landscape',
-        unit: 'mm',
-        format: 'legal'
-      });
+    // 🔹 Export Table to PDF with filtering and landscape orientation
 
-      // Get filter values for filename
-      const selectedMonth = document.getElementById('monthFilter').value;
-      const selectedStatus = document.getElementById('statusFilter').value;
-      const selectedUrgent = document.getElementById('urgentFilter').value;
-      const searchText = document.getElementById('searchInput').value;
-      
-      // Create filename with filter information
-      let filename = `Reports_${adminBarangay}`;
-      if (selectedMonth) {
-        const monthNames = ["January", "February", "March", "April", "May", "June",
-          "July", "August", "September", "October", "November", "December"];
-        filename += `_${monthNames[parseInt(selectedMonth)-1]}`;
-      }
-      if (selectedStatus) filename += `_${selectedStatus.replace(' ', '')}`;
-      if (selectedUrgent) filename += `_${selectedUrgent === 'true' ? 'Urgent' : 'NonUrgent'}`;
-      if (searchText) filename += `_Search`;
+    
+function exportPDF() {
+  const { jsPDF } = window.jspdf;
+  
+  // Create PDF in landscape orientation
+  const doc = new jsPDF({
+    orientation: 'landscape',
+    unit: 'mm',
+    format: 'legal'
+  });
 
-      // Title with filter information
-      let title = `Reports Table - ${adminBarangay}`;
-      let subtitle = '';
-      
-      if (selectedMonth || selectedStatus || selectedUrgent || searchText) {
-        subtitle = 'Filtered by: ';
-        const filters = [];
-        
-        if (selectedMonth) {
-          const monthNames = ["January", "February", "March", "April", "May", "June",
-            "July", "August", "September", "October", "November", "December"];
-          filters.push(`Month: ${monthNames[parseInt(selectedMonth)-1]}`);
-        }
-        if (selectedStatus) filters.push(`Status: ${selectedStatus}`);
-        if (selectedUrgent) filters.push(`Urgent: ${selectedUrgent === 'true' ? 'Yes' : 'No'}`);
-        if (searchText) filters.push(`Search: "${searchText}"`);
-        
-        subtitle += filters.join(', ');
-      }
+  // Get filter values for filename
+  const selectedMonth = document.getElementById('monthFilter').value;
+  const selectedStatus = document.getElementById('statusFilter').value;
+  const selectedUrgent = document.getElementById('urgentFilter').value;
+  const searchText = document.getElementById('searchInput').value;
+  const dateFrom = document.getElementById('dateFromFilter').value;
+  const dateTo = document.getElementById('dateToFilter').value;
+  
+  // Create filename with filter information
+  let filename = `Reports_${adminBarangay}`;
+  if (selectedMonth) {
+    const monthNames = ["January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"];
+    filename += `_${monthNames[parseInt(selectedMonth)-1]}`;
+  }
+  if (selectedStatus) filename += `_${selectedStatus.replace(' ', '')}`;
+  if (selectedUrgent) filename += `_${selectedUrgent === 'true' ? 'Urgent' : 'NonUrgent'}`;
+  if (searchText) filename += `_Search`;
+  if (dateFrom) filename += `_From${dateFrom}`;
+  if (dateTo) filename += `_To${dateTo}`;
 
-      // Add title and subtitle
-      doc.setFontSize(16);
-      doc.setFont(undefined, 'bold');
-      doc.text(title, 14, 15);
-      
-      if (subtitle) {
-        doc.setFontSize(10);
-        doc.setFont(undefined, 'normal');
-        doc.text(subtitle, 14, 22);
-      }
-
-      const table = document.getElementById("reportTable");
-      
-      // Get only visible rows (respecting current filters)
-      const visibleRows = Array.from(table.querySelectorAll("tbody tr"))
-        .filter(row => row.style.display !== 'none' && !row.classList.contains('empty-state-row') && row.cells.length > 17);
-
-      const head = [[
-        "Case#", "Category", "Blotter Type", "Incident Type", "Barangay", "Reporter", "Email", 
-        "Description", "Date Submitted", "Incident Time", "Specific Location", "Accused",
-        "Urgent?", "Status", "Schedule", "Admin Feedback", "Media Count"
-      ]];
-
-      const body = [];
-
-      visibleRows.forEach(row => {
-        const cells = row.querySelectorAll("td");
-        const rowData = [];
-
-        for (let i = 0; i < cells.length - 1; i++) {  // skip "Actions"
-          // Skip the media button cell (index 16)
-          if (i === 16) {
-            // Get media count from the button
-            const mediaBtn = cells[i].querySelector('.media-btn');
-            const countBadge = mediaBtn ? mediaBtn.querySelector('.media-count-badge') : null;
-            const mediaCount = countBadge ? countBadge.textContent : '0';
-            rowData.push(mediaCount);
-            continue;
-          }
-          
-          const select = cells[i].querySelector("select");
-          const input = cells[i].querySelector("input");
-          const textarea = cells[i].querySelector("textarea");
-
-          if (select) {
-            rowData.push(select.value);
-          } else if (input) {
-            rowData.push(input.value || "—");
-          } else if (textarea) {
-            // Truncate long feedback text to prevent PDF overflow
-            const text = textarea.value || "No feedback";
-            rowData.push(text.length > 100 ? text.substring(0, 100) + "..." : text);
-          } else {
-            // Truncate long description text to prevent PDF overflow
-            let cellText = cells[i].innerText.trim();
-            if (i === 7 && cellText.length > 100) { // Description column
-              cellText = cellText.substring(0, 100) + "...";
-            }
-            rowData.push(cellText);
-          }
-        }
-
-        body.push(rowData);
-      });
-
-      // Add the table to PDF
-      doc.autoTable({
-        head: head,
-        body: body,
-        startY: subtitle ? 28 : 20,
-        styles: { 
-          fontSize: 7,
-          cellPadding: 2,
-          overflow: 'linebreak'
-        },
-        headStyles: { 
-          fillColor: [30, 41, 59],
-          textColor: 255,
-          fontStyle: 'bold'
-        },
-        theme: 'grid',
-        margin: { top: 10 },
-        tableWidth: 'auto',
-        columnStyles: {
-          0: { cellWidth: 20 }, // Case#
-          1: { cellWidth: 15 }, // Category
-          2: { cellWidth: 15 }, // Blotter Type
-          3: { cellWidth: 15 }, // Incident Type
-          4: { cellWidth: 20 }, // Barangay
-          5: { cellWidth: 20 }, // Reporter
-          6: { cellWidth: 35 }, // Email
-          7: { cellWidth: 50 }, // Description
-          8: { cellWidth: 20 }, // Date Submitted
-          9: { cellWidth: 15 }, // Incident Time
-          10: { cellWidth: 30 }, // Specific Location
-          11: { cellWidth: 25 }, // Accused
-          12: { cellWidth: 15 }, // Urgent?
-          13: { cellWidth: 15 }, // Status
-          14: { cellWidth: 25 }, // Schedule
-          15: { cellWidth: 40 }, // Admin Feedback
-          16: { cellWidth: 15 }, // Media Count
-        }
-      });
-
-      // Save the PDF
-      doc.save(`${filename}.pdf`);
+  // Title with filter information
+  let title = `Reports Table - ${adminBarangay}`;
+  let subtitle = '';
+  
+  if (selectedMonth || selectedStatus || selectedUrgent || searchText || dateFrom || dateTo) {
+    subtitle = 'Filtered by: ';
+    const filters = [];
+    
+    if (selectedMonth) {
+      const monthNames = ["January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"];
+      filters.push(`Month: ${monthNames[parseInt(selectedMonth)-1]}`);
     }
+    if (selectedStatus) filters.push(`Status: ${selectedStatus}`);
+    if (selectedUrgent) filters.push(`Urgent: ${selectedUrgent === 'true' ? 'Yes' : 'No'}`);
+    if (searchText) filters.push(`Search: "${searchText}"`);
+    if (dateFrom) filters.push(`From: ${formatDateForDisplay(dateFrom)}`);
+    if (dateTo) filters.push(`To: ${formatDateForDisplay(dateTo)}`);
+    
+    subtitle += filters.join(', ');
+  }
+
+  // Add title and subtitle
+  doc.setFontSize(16);
+  doc.setFont(undefined, 'bold');
+  doc.text(title, 14, 15);
+  
+  if (subtitle) {
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    doc.text(subtitle, 14, 22);
+  }
+
+  const table = document.getElementById("reportTable");
+  
+  // Get only visible rows (respecting current filters)
+  const visibleRows = Array.from(table.querySelectorAll("tbody tr"))
+    .filter(row => row.style.display !== 'none' && !row.classList.contains('empty-state-row') && row.cells.length > 17);
+
+  const head = [[
+    "Case#", "Category", "Blotter Type", "Incident Type", "Barangay", "Reporter", "Email", 
+    "Description", "Date Submitted", "Incident Time", "Specific Location", "Accused",
+    "Urgent?", "Status", "Schedule", "Admin Feedback", "Media Count"
+  ]];
+
+  const body = [];
+
+  visibleRows.forEach(row => {
+    const cells = row.querySelectorAll("td");
+    const rowData = [];
+
+    for (let i = 0; i < cells.length - 1; i++) {  // skip "Actions"
+      // Skip the media button cell (index 16)
+      if (i === 16) {
+        // Get media count from the button
+        const mediaBtn = cells[i].querySelector('.media-btn');
+        const countBadge = mediaBtn ? mediaBtn.querySelector('.media-count-badge') : null;
+        const mediaCount = countBadge ? countBadge.textContent : '0';
+        rowData.push(mediaCount);
+        continue;
+      }
+      
+      const select = cells[i].querySelector("select");
+      const input = cells[i].querySelector("input");
+      const textarea = cells[i].querySelector("textarea");
+
+      if (select) {
+        rowData.push(select.value);
+      } else if (input) {
+        rowData.push(input.value || "—");
+      } else if (textarea) {
+        // Truncate long feedback text to prevent PDF overflow
+        const text = textarea.value || "No feedback";
+        rowData.push(text.length > 100 ? text.substring(0, 100) + "..." : text);
+      } else {
+        // Truncate long description text to prevent PDF overflow
+        let cellText = cells[i].innerText.trim();
+        if (i === 7 && cellText.length > 100) { // Description column
+          cellText = cellText.substring(0, 100) + "...";
+        }
+        rowData.push(cellText);
+      }
+    }
+
+    body.push(rowData);
+  });
+
+  // Add the table to PDF
+  doc.autoTable({
+    head: head,
+    body: body,
+    startY: subtitle ? 28 : 20,
+    styles: { 
+      fontSize: 7,
+      cellPadding: 2,
+      overflow: 'linebreak'
+    },
+    headStyles: { 
+      fillColor: [30, 41, 59],
+      textColor: 255,
+      fontStyle: 'bold'
+    },
+    theme: 'grid',
+    margin: { top: 10 },
+    tableWidth: 'auto',
+    columnStyles: {
+      0: { cellWidth: 20 }, // Case#
+      1: { cellWidth: 15 }, // Category
+      2: { cellWidth: 15 }, // Blotter Type
+      3: { cellWidth: 15 }, // Incident Type
+      4: { cellWidth: 20 }, // Barangay
+      5: { cellWidth: 20 }, // Reporter
+      6: { cellWidth: 35 }, // Email
+      7: { cellWidth: 50 }, // Description
+      8: { cellWidth: 20 }, // Date Submitted
+      9: { cellWidth: 15 }, // Incident Time
+      10: { cellWidth: 30 }, // Specific Location
+      11: { cellWidth: 25 }, // Accused
+      12: { cellWidth: 15 }, // Urgent?
+      13: { cellWidth: 15 }, // Status
+      14: { cellWidth: 25 }, // Schedule
+      15: { cellWidth: 40 }, // Admin Feedback
+      16: { cellWidth: 15 }, // Media Count
+    }
+  });
+
+  // Save the PDF
+  doc.save(`${filename}.pdf`);
+
+  
+}
+
+
+
+
+
+// 🔹 Helper function to format date for display
+function formatDateForDisplay(dateString) {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+
 
     // 🔹 Search Filter
     document.getElementById("searchInput").addEventListener("keyup", function() {
@@ -3143,9 +3593,66 @@ On ${formattedDate}, at around ${incidentTime || '[time]'}, while I was at ${cur
         e.target.style.height = (e.target.scrollHeight) + "px";
       }
     });
+// 🔹 Clear all filters
+function clearFilters() {
+  document.getElementById('searchInput').value = '';
+  document.getElementById('monthFilter').value = '';
+  document.getElementById('statusFilter').value = '';
+  document.getElementById('urgentFilter').value = '';
+  document.getElementById('dateFromFilter').value = '';
+  document.getElementById('dateToFilter').value = '';
+  
+  // Reset table to show all rows
+  const tableBody = document.querySelector("#reportTable tbody");
+  const rows = tableBody.querySelectorAll('tr');
+  rows.forEach(row => {
+    if (row.classList.contains('empty-state-row')) {
+      row.remove();
+    } else {
+      row.style.display = '';
+    }
+  });
+  
+  // Remove empty state if it exists
+  const existingEmptyState = tableBody.querySelector('.empty-state-row');
+  if (existingEmptyState) existingEmptyState.remove();
+  
+  showNotification('All filters cleared', 'success');
+}
 
+// 🔹 Helper function to display date in a user-friendly format
+function displayDate(dateString) {
+  if (!dateString) return 'N/A';
+  
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return dateString;
+    
+    const now = new Date();
+    const diffTime = Math.abs(now - date);
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) {
+      return 'Today';
+    } else if (diffDays === 1) {
+      return 'Yesterday';
+    } else if (diffDays < 7) {
+      return `${diffDays} days ago`;
+    } else {
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      });
+    }
+  } catch (error) {
+    return dateString;
+  }
+}
     // Check admin authentication when page loads
     checkAdminAuth();
   </script>
+
+
 </body>
 </html>
